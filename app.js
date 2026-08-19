@@ -7,7 +7,8 @@ let supabaseClient = null;
 
 const state = {
   role: null,
-  profile: null
+  profile: null,
+  page: "dashboard"
 };
 
 function toast(message) {
@@ -25,7 +26,6 @@ function toast(message) {
 function initSupabase() {
   if (!window.supabase) {
     toast("تعذر تحميل نظام الاتصال");
-    console.error("Supabase library was not loaded.");
     return false;
   }
 
@@ -44,16 +44,13 @@ function login() {
 
         <div class="login-logo">
           <div class="mark">ن</div>
-
           <h1>نور</h1>
-
           <p class="muted">
             نظام إدارة حلقات تحفيظ القرآن الكريم
           </p>
         </div>
 
         <div class="role-tabs">
-
           <button
             class="active"
             onclick="selectRole(this,'supervisor')">
@@ -69,12 +66,10 @@ function login() {
             onclick="selectRole(this,'student')">
             طالب
           </button>
-
         </div>
 
         <div class="field">
           <label>البريد الإلكتروني</label>
-
           <input
             id="loginEmail"
             type="email"
@@ -84,7 +79,6 @@ function login() {
 
         <div class="field">
           <label>كلمة المرور</label>
-
           <input
             id="loginPassword"
             type="password"
@@ -116,7 +110,6 @@ function selectRole(button, role) {
     .forEach(btn => btn.classList.remove("active"));
 
   button.classList.add("active");
-
   state.role = role;
 }
 
@@ -132,19 +125,6 @@ async function doLogin() {
     return;
   }
 
-  if (!supabaseClient) {
-    toast("الاتصال بقاعدة البيانات غير جاهز");
-    return;
-  }
-
-  const button =
-    document.querySelector(".login-box .btn");
-
-  if (button) {
-    button.disabled = true;
-    button.textContent = "جاري الدخول...";
-  }
-
   const { data, error } =
     await supabaseClient.auth.signInWithPassword({
       email,
@@ -153,25 +133,12 @@ async function doLogin() {
 
   if (error) {
     console.error(error);
-
     toast("بيانات الدخول غير صحيحة");
-
-    if (button) {
-      button.disabled = false;
-      button.textContent = "تسجيل الدخول";
-    }
-
     return;
   }
 
   if (!data?.user) {
     toast("تعذر تسجيل الدخول");
-
-    if (button) {
-      button.disabled = false;
-      button.textContent = "تسجيل الدخول";
-    }
-
     return;
   }
 
@@ -193,7 +160,6 @@ async function loadProfile(userId) {
 
     toast("لم يتم العثور على بيانات الحساب");
     login();
-
     return;
   }
 
@@ -201,27 +167,38 @@ async function loadProfile(userId) {
   state.role = data.role;
 
   if (data.role === "supervisor") {
-    showSupervisorHome();
+    state.page = "dashboard";
+    await renderSupervisor();
     return;
   }
 
   if (data.role === "teacher") {
-    showTeacherHome();
+    showSimpleRolePage("المعلم");
     return;
   }
 
   if (data.role === "student") {
-    showStudentHome();
+    showSimpleRolePage("الطالب");
     return;
   }
 
-  await supabaseClient.auth.signOut();
-
   toast("نوع الحساب غير معروف");
-  login();
 }
 
-function baseShell(content) {
+const navItems = [
+  ["dashboard", "الرئيسية"],
+  ["halaqat", "الحلقات"],
+  ["teachers", "المعلمون"],
+  ["students", "الطلاب"],
+  ["points", "النقاط"],
+  ["attendance", "التحضير والغياب"],
+  ["competitions", "المسابقات"],
+  ["badges", "الأوسمة"],
+  ["reports", "التقارير"],
+  ["settings", "الإعدادات"]
+];
+
+function supervisorShell(content) {
   return `
     <div class="shell">
 
@@ -229,165 +206,253 @@ function baseShell(content) {
 
         <div class="brand">
           <div class="mark">ن</div>
-
           <span>نور</span>
-
-          <span class="muted">
-            حلقات التحفيظ
-          </span>
+          <span class="muted">حلقات التحفيظ</span>
         </div>
 
         <div class="top-actions">
-
           <button
             class="btn light"
             onclick="logout()">
             تسجيل الخروج
           </button>
-
         </div>
 
       </header>
 
-      <main>
-        ${content}
-      </main>
+      <div class="layout">
+
+        <aside>
+          <div class="nav">
+
+            ${navItems.map(item => `
+              <button
+                class="${state.page === item[0] ? "active" : ""}"
+                onclick="goSupervisorPage('${item[0]}')">
+                ${item[1]}
+              </button>
+            `).join("")}
+
+          </div>
+        </aside>
+
+        <main>
+          ${content}
+        </main>
+
+      </div>
 
     </div>
   `;
 }
 
-function showSupervisorHome() {
+async function goSupervisorPage(page) {
+  state.page = page;
+
+  if (page === "dashboard") {
+    await renderSupervisor();
+    return;
+  }
+
+  const titles = {
+    halaqat: "الحلقات",
+    teachers: "المعلمون",
+    students: "الطلاب",
+    points: "النقاط",
+    attendance: "التحضير والغياب",
+    competitions: "المسابقات",
+    badges: "الأوسمة",
+    reports: "التقارير",
+    settings: "الإعدادات"
+  };
+
+  document.getElementById("app").innerHTML =
+    supervisorShell(`
+      <div class="section-title">
+        <h2>${titles[page]}</h2>
+      </div>
+
+      <div class="card">
+        <h2>${titles[page]}</h2>
+
+        <p class="muted">
+          هذا القسم سيتم تجهيزه وربطه بقاعدة البيانات في الخطوة القادمة.
+        </p>
+      </div>
+    `);
+}
+
+async function getCount(table) {
+  const { count, error } =
+    await supabaseClient
+      .from(table)
+      .select("id", {
+        count: "exact",
+        head: true
+      });
+
+  if (error) {
+    console.error(`Count error: ${table}`, error);
+    return 0;
+  }
+
+  return count || 0;
+}
+
+async function renderSupervisor() {
+  document.getElementById("app").innerHTML =
+    supervisorShell(`
+      <div class="card">
+        <h2>جاري تحميل لوحة المشرف...</h2>
+        <p class="muted">لحظات...</p>
+      </div>
+    `);
+
+  const [
+    studentsCount,
+    halaqatCount,
+    competitionsCount
+  ] = await Promise.all([
+    getCount("students"),
+    getCount("halaqat"),
+    getCount("competitions")
+  ]);
+
+  const teachersResult =
+    await supabaseClient
+      .from("profiles")
+      .select("id", {
+        count: "exact",
+        head: true
+      })
+      .eq("role", "teacher");
+
+  const teachersCount =
+    teachersResult.error
+      ? 0
+      : (teachersResult.count || 0);
+
   const name =
     state.profile?.full_name || "المشرف";
 
   document.getElementById("app").innerHTML =
-    baseShell(`
+    supervisorShell(`
       <section class="hero">
 
         <div>
-
-          <h1>
-            مرحبًا بك يا ${escapeHtml(name)}
-          </h1>
+          <h1>مرحبًا بك يا ${escapeHtml(name)}</h1>
 
           <p>
-            لوحة المشرف في نظام نور
+            لوحة التحكم الرئيسية لنظام نور
           </p>
-
         </div>
+
+        <button
+          class="btn gold"
+          onclick="goSupervisorPage('students')">
+          إدارة الطلاب
+        </button>
 
       </section>
 
       <div class="grid">
 
         <div class="stat">
-          <small>نوع الحساب</small>
-          <strong>مشرف</strong>
+          <small>إجمالي الطلاب</small>
+          <strong>${studentsCount}</strong>
         </div>
 
         <div class="stat">
-          <small>حالة الحساب</small>
-          <strong>
-            ${state.profile.is_active ? "نشط" : "غير نشط"}
-          </strong>
+          <small>الحلقات</small>
+          <strong>${halaqatCount}</strong>
+        </div>
+
+        <div class="stat">
+          <small>المعلمون</small>
+          <strong>${teachersCount}</strong>
+        </div>
+
+        <div class="stat">
+          <small>المسابقات</small>
+          <strong>${competitionsCount}</strong>
         </div>
 
       </div>
 
-      <div class="card">
+      <div class="section-title">
+        <h2>الوصول السريع</h2>
+      </div>
 
-        <h2>
-          تم تسجيل الدخول بنجاح 🎉
-        </h2>
+      <div class="cards">
 
-        <p class="muted">
-          الاتصال بقاعدة بيانات نور يعمل.
-        </p>
+        <div class="card">
+          <h3>👨‍🎓 الطلاب</h3>
+          <p class="muted">
+            إدارة الطلاب وبياناتهم وحلقاتهم.
+          </p>
+
+          <button
+            class="btn"
+            onclick="goSupervisorPage('students')">
+            فتح الطلاب
+          </button>
+        </div>
+
+        <div class="card">
+          <h3>📚 الحلقات</h3>
+          <p class="muted">
+            إدارة الحلقات وربط المعلمين بها.
+          </p>
+
+          <button
+            class="btn"
+            onclick="goSupervisorPage('halaqat')">
+            فتح الحلقات
+          </button>
+        </div>
+
+        <div class="card">
+          <h3>🏆 المسابقات</h3>
+          <p class="muted">
+            إدارة المسابقات والنتائج والترتيب.
+          </p>
+
+          <button
+            class="btn"
+            onclick="goSupervisorPage('competitions')">
+            فتح المسابقات
+          </button>
+        </div>
 
       </div>
     `);
 }
 
-function showTeacherHome() {
-  const name =
-    state.profile?.full_name || "المعلم";
-
+function showSimpleRolePage(roleName) {
   document.getElementById("app").innerHTML =
-    baseShell(`
+    supervisorShell(`
       <section class="hero">
-
         <div>
-
-          <h1>
-            مرحبًا بك يا ${escapeHtml(name)}
-          </h1>
-
-          <p>
-            لوحة المعلم
-          </p>
-
+          <h1>مرحبًا بك</h1>
+          <p>لوحة ${roleName}</p>
         </div>
-
       </section>
 
       <div class="card">
-
-        <h2>
-          لوحة المعلم
-        </h2>
-
+        <h2>تم تسجيل الدخول بنجاح 🎉</h2>
         <p class="muted">
-          سيتم تجهيز صلاحيات المعلم في الخطوات القادمة.
+          سيتم تجهيز لوحة ${roleName} في خطوات لاحقة.
         </p>
-
-      </div>
-    `);
-}
-
-function showStudentHome() {
-  const name =
-    state.profile?.full_name || "الطالب";
-
-  document.getElementById("app").innerHTML =
-    baseShell(`
-      <section class="hero">
-
-        <div>
-
-          <h1>
-            مرحبًا بك يا ${escapeHtml(name)}
-          </h1>
-
-          <p>
-            لوحة الطالب
-          </p>
-
-        </div>
-
-      </section>
-
-      <div class="card">
-
-        <h2>
-          لوحة الطالب
-        </h2>
-
-        <p class="muted">
-          سيتم تجهيز لوحة الطالب في الخطوات القادمة.
-        </p>
-
       </div>
     `);
 }
 
 async function logout() {
-  if (supabaseClient) {
-    await supabaseClient.auth.signOut();
-  }
+  await supabaseClient.auth.signOut();
 
   state.role = null;
   state.profile = null;
+  state.page = "dashboard";
 
   login();
   toast("تم تسجيل الخروج");
@@ -403,9 +468,7 @@ function escapeHtml(value) {
 }
 
 async function startApp() {
-  if (!initSupabase()) {
-    return;
-  }
+  if (!initSupabase()) return;
 
   const {
     data: { session }
