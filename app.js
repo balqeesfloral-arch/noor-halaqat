@@ -1,25 +1,421 @@
-const POINTS={grant:[["الدرس",1],["المراجعة",1],["جنب الدرس",1],["الأدب",1],["مساعدة المعلم 1",1],["مساعدة المعلم 2",2],["مساعدة المعلم 3",3],["الأذكار",1],["الدرس التربوي",3]],deduction:[["التأخر عن الصلاة",-1],["سوء الأدب",-1],["عدم تسميع المراجعة",-1],["عدم تسميع الدرس",-1],["عدم تسميع جنب الدرس",-1]]};
-const demo=[["محمد أحمد",11,"سادس ابتدائي","قرآن كريم",184],["عبدالله خالد",13,"ثاني متوسط","قرآن كريم",171],["سعد علي",10,"خامس ابتدائي","قاعدة نورانية",159],["يوسف محمد",15,"ثالث متوسط","قرآن كريم",148],["عبدالرحمن صالح",12,"أول متوسط","قرآن كريم",136],["أنس فهد",9,"رابع ابتدائي","قاعدة نورانية",124]].map((x,i)=>({id:i+1,name:x[0],age:x[1],level:x[2],type:x[3],points:x[4]}));
-let state={role:"supervisor",page:"dashboard",students:demo,history:[]};
-function toast(t){let x=document.createElement("div");x.className="toast";x.textContent=t;document.body.appendChild(x);setTimeout(()=>x.remove(),2200)}
-function login(){document.getElementById("app").innerHTML=`<div class="login"><div class="login-box"><div class="login-logo"><div class="mark">ن</div><h1>نور</h1><p class="muted">نظام إدارة حلقات تحفيظ القرآن الكريم</p></div><div class="role-tabs"><button class="active" onclick="pickRole(this,'supervisor')">مشرف</button><button onclick="pickRole(this,'teacher')">معلم</button><button onclick="pickRole(this,'student')">طالب</button></div><div class="field"><label>رقم الدخول / البريد</label><input id="loginId" placeholder="أدخل بيانات الدخول"></div><div class="field"><label>كلمة المرور</label><input id="loginPw" type="password" placeholder="كلمة المرور"></div><button class="btn" style="width:100%" onclick="doLogin()">تسجيل الدخول</button><p class="muted" style="text-align:center;margin-top:15px">واجهة أولية — سيتم ربطها بـ Supabase.</p></div></div>`}
-function pickRole(el,r){document.querySelectorAll(".role-tabs button").forEach(x=>x.classList.remove("active"));el.classList.add("active");state.role=r}
-function doLogin(){state.page="dashboard";render();toast("مرحبًا بك في نظام نور")}
-const navItems=[["dashboard","الرئيسية"],["students","الطلاب"],["points","المنح والخصم"],["attendance","التحضير والغياب"],["competitions","المسابقات"],["reports","التقارير"],["tv","لوحة التلفزيون"]];
-function nav(p){state.page=p;render()}
-function shell(content){return `<div class="shell"><header class="top"><div class="brand"><div class="mark">ن</div>نور <span class="muted">حلقات التحفيظ</span></div><div class="top-actions"><button class="btn light" onclick="nav('tv')">شاشة المراكز</button><button class="btn" onclick="login()">خروج</button></div></header><div class="layout"><aside><div class="nav">${navItems.map(x=>`<button class="${state.page===x[0]?'active':''}" onclick="nav('${x[0]}')">${x[1]}</button>`).join("")}</div></aside><main>${content}</main></div></div>`}
-function render(){let c={dashboard,students,points,attendance,competitions,reports}[state.page]?.()||dashboard();document.getElementById("app").innerHTML=state.page==="tv"?tv():shell(c)}
-function dashboard(){return `<section class="hero"><div><h1>لوحة المتابعة</h1><p>إدارة سهلة وواضحة لحلقة التحفيظ ومتابعة تقدم الطلاب.</p></div><button class="btn gold" onclick="nav('points')">إدارة نقاط اليوم</button></section><div class="grid"><div class="stat"><small>إجمالي الطلاب</small><strong>${state.students.length}</strong></div><div class="stat"><small>إجمالي النقاط</small><strong>${state.students.reduce((a,b)=>a+b.points,0)}</strong></div><div class="stat"><small>حضور اليوم</small><strong>92%</strong></div><div class="stat"><small>المراكز</small><strong>${state.students.length}</strong></div></div><div class="section-title"><h2>المتصدرون</h2><span class="muted">حسب مجموع النقاط</span></div>${leaderTable()}`}
-function leaderTable(){return `<div class="table-wrap"><table class="table"><thead><tr><th>المركز</th><th>الطالب</th><th>نوع الحفظ</th><th>المستوى</th><th>النقاط</th></tr></thead><tbody>${[...state.students].sort((a,b)=>b.points-a.points).map((x,i)=>`<tr><td><span class="pill">${i+1}</span></td><td><b>${x.name}</b></td><td>${x.type}</td><td>${x.level}</td><td class="points">${x.points}</td></tr>`).join("")}</tbody></table></div>`}
-function students(){return `<div class="section-title"><h2>طلاب الحلقة</h2><button class="btn" onclick="studentModal()">+ إضافة طالب</button></div><div class="cards">${state.students.map(x=>`<div class="student"><div class="person"><div class="avatar">${x.name[0]}</div><div><b>${x.name}</b><div class="muted">${x.age} سنة • ${x.level}</div></div></div><span class="pill">${x.points} نقطة</span></div>`).join("")}</div>`}
-function points(){return `<section class="hero"><div><h1>المنح والخصم</h1><p>اختر طالبًا وطبّق أكثر من بند في عملية واحدة، مع حفظ التاريخ.</p></div></section><div class="section-title"><h2>طلاب الحلقة</h2><span class="muted">اليوم: ${new Date().toLocaleDateString("ar-SA")}</span></div><div class="cards">${state.students.map(x=>`<div class="card"><div class="student" style="border:0;padding:0 0 14px"><div class="person"><div class="avatar">${x.name[0]}</div><div><b>${x.name}</b><div class="muted">${x.points} نقطة</div></div></div></div><div style="display:grid;grid-template-columns:1fr 1fr;gap:8px"><button class="btn" onclick="pointsModal(${x.id},'grant')">منح</button><button class="btn danger" onclick="pointsModal(${x.id},'deduction')">خصم</button></div></div>`).join("")}</div>`}
-function pointsModal(id,cat){let s=state.students.find(x=>x.id===id);document.body.insertAdjacentHTML("beforeend",`<div class="modal" id="modal"><div class="modal-box"><div class="section-title"><h2>${cat==="grant"?"منح نقاط":"خصم نقاط"} — ${s.name}</h2><button class="btn light" onclick="closeModal()">إغلاق</button></div><div class="checks">${POINTS[cat].map((p,i)=>`<label class="check"><input type="checkbox" data-p="${i}"><span>${p[0]} <b class="${p[1]>0?'positive':'negative'}">${p[1]>0?'+':''}${p[1]}</b></span></label>`).join("")}</div><div class="field"><label>تاريخ العملية</label><input id="pointDate" type="date" value="${new Date().toISOString().slice(0,10)}"></div><button class="btn" style="width:100%" onclick="applyPoints(${id},'${cat}')">حفظ العملية</button></div></div>`)}
-function applyPoints(id,cat){let cs=[...document.querySelectorAll("#modal input[data-p]:checked")];if(!cs.length)return toast("اختر بندًا واحدًا على الأقل");let total=cs.reduce((a,c)=>a+POINTS[cat][+c.dataset.p][1],0),s=state.students.find(x=>x.id===id);s.points+=total;state.history.push({student:s.name,total,date:pointDate.value});closeModal();render();toast(`تم حفظ العملية: ${total>0?"+":""}${total} نقطة`)}
-function closeModal(){document.getElementById("modal")?.remove()}
-function studentModal(){document.body.insertAdjacentHTML("beforeend",`<div class="modal" id="modal"><div class="modal-box"><div class="section-title"><h2>إضافة طالب</h2><button class="btn light" onclick="closeModal()">إغلاق</button></div><div class="field"><label>الاسم</label><input id="sn"></div><div class="field"><label>العمر</label><input id="sa" type="number"></div><div class="field"><label>نوع الحفظ</label><select id="st"><option>قرآن كريم</option><option>قاعدة نورانية</option></select></div><div class="field"><label>المستوى الدراسي</label><select id="sl"><option>أول ابتدائي</option><option>ثاني ابتدائي</option><option>ثالث ابتدائي</option><option>رابع ابتدائي</option><option>خامس ابتدائي</option><option>سادس ابتدائي</option><option>أول متوسط</option><option>ثاني متوسط</option><option>ثالث متوسط</option><option>أول ثانوي</option><option>ثاني ثانوي</option><option>ثالث ثانوي</option><option>آخر</option></select></div><button class="btn" style="width:100%" onclick="addStudent()">حفظ الطالب</button></div></div>`)}
-function addStudent(){let name=sn.value.trim();if(!name)return toast("اكتب اسم الطالب");state.students.push({id:Date.now(),name,age:+sa.value||0,type:st.value,level:sl.value,points:0});closeModal();render();toast("تمت إضافة الطالب")}
-function attendance(){return `<div class="section-title"><h2>التحضير والغياب</h2><span class="pill">سجل مستقل</span></div><div class="card"><div class="table-wrap"><table class="table"><thead><tr><th>الطالب</th><th>الحالة</th><th>التاريخ</th></tr></thead><tbody>${state.students.map(x=>`<tr><td>${x.name}</td><td><select><option>حاضر</option><option>متأخر</option><option>غائب</option><option>بعذر</option></select></td><td>${new Date().toLocaleDateString("ar-SA")}</td></tr>`).join("")}</tbody></table></div></div>`}
-function competitions(){return `<div class="section-title"><h2>المسابقات</h2><button class="btn" onclick="toast('سيتم حفظ المسابقة في Supabase بعد الربط')">+ مسابقة جديدة</button></div><div class="cards"><div class="card"><span class="pill">هذا الشهر</span><h3>فرسان القرآن</h3><p class="muted">مسابقة شهرية لرفع روح المنافسة والتحفيز.</p><b>المشاركون: ${state.students.length}</b></div><div class="card"><span class="pill">نشطة</span><h3>نجم الأذكار</h3><p class="muted">متابعة الالتزام بالأذكار اليومية.</p><b>3 نقاط</b></div></div>`}
-function reports(){return `<section class="hero"><div><h1>التقارير</h1><p>تقارير شهرية قابلة للتصدير PDF بعد الربط بقاعدة البيانات.</p></div><button class="btn gold" onclick="toast('التصدير PDF سيكون متاحًا بعد الربط')">تصدير PDF</button></section><div class="grid"><div class="stat"><small>عمليات النقاط</small><strong>${state.history.length}</strong></div><div class="stat"><small>طلاب نشطون</small><strong>${state.students.length}</strong></div><div class="stat"><small>متوسط النقاط</small><strong>${Math.round(state.students.reduce((a,b)=>a+b.points,0)/state.students.length)}</strong></div><div class="stat"><small>الحضور</small><strong>92%</strong></div></div>`}
-function tv(){let s=[...state.students].sort((a,b)=>b.points-a.points);return `<div class="tv"><div class="tv-head"><div><div class="brand" style="color:white"><div class="mark">ن</div>نور</div><div class="muted" style="color:#bdd0ca">لوحة إنجاز الطلاب</div></div><button class="btn light" onclick="render()">العودة</button></div><div class="podium">${s[1]?`<div class="rank"><strong>2</strong><h2>${s[1].name}</h2><div>${s[1].points} نقطة</div></div>`:""}${s[0]?`<div class="rank first"><strong>1</strong><h2>${s[0].name}</h2><div>${s[0].points} نقطة</div></div>`:""}${s[2]?`<div class="rank"><strong>3</strong><h2>${s[2].name}</h2><div>${s[2].points} نقطة</div></div>`:""}</div><div class="leaderboard">${s.slice(3).map((x,i)=>`<div class="leader"><b>${i+4}</b><span>${x.name}</span><b>${x.points} نقطة</b></div>`).join("")}</div></div>`}
-login();
+const SUPABASE_URL = "https://mdkhklotknuseilyrvqe.supabase.co";
+
+const SUPABASE_KEY =
+  "sb_publishable_bcUxs6kzHTz4nSli1l3w1A_E1tr8HOE";
+
+let supabaseClient = null;
+
+const state = {
+  role: null,
+  profile: null
+};
+
+function toast(message) {
+  document.querySelector(".toast")?.remove();
+
+  const el = document.createElement("div");
+  el.className = "toast";
+  el.textContent = message;
+
+  document.body.appendChild(el);
+
+  setTimeout(() => el.remove(), 2500);
+}
+
+function initSupabase() {
+  if (!window.supabase) {
+    toast("تعذر تحميل نظام الاتصال");
+    console.error("Supabase library was not loaded.");
+    return false;
+  }
+
+  supabaseClient = window.supabase.createClient(
+    SUPABASE_URL,
+    SUPABASE_KEY
+  );
+
+  return true;
+}
+
+function login() {
+  document.getElementById("app").innerHTML = `
+    <div class="login">
+      <div class="login-box">
+
+        <div class="login-logo">
+          <div class="mark">ن</div>
+
+          <h1>نور</h1>
+
+          <p class="muted">
+            نظام إدارة حلقات تحفيظ القرآن الكريم
+          </p>
+        </div>
+
+        <div class="role-tabs">
+
+          <button
+            class="active"
+            onclick="selectRole(this,'supervisor')">
+            مشرف
+          </button>
+
+          <button
+            onclick="selectRole(this,'teacher')">
+            معلم
+          </button>
+
+          <button
+            onclick="selectRole(this,'student')">
+            طالب
+          </button>
+
+        </div>
+
+        <div class="field">
+          <label>البريد الإلكتروني</label>
+
+          <input
+            id="loginEmail"
+            type="email"
+            placeholder="أدخل البريد الإلكتروني"
+            autocomplete="email">
+        </div>
+
+        <div class="field">
+          <label>كلمة المرور</label>
+
+          <input
+            id="loginPassword"
+            type="password"
+            placeholder="أدخل كلمة المرور"
+            autocomplete="current-password">
+        </div>
+
+        <button
+          class="btn"
+          style="width:100%"
+          onclick="doLogin()">
+          تسجيل الدخول
+        </button>
+
+        <p
+          class="muted"
+          style="text-align:center;margin-top:15px">
+          نظام نور لإدارة حلقات التحفيظ
+        </p>
+
+      </div>
+    </div>
+  `;
+}
+
+function selectRole(button, role) {
+  document
+    .querySelectorAll(".role-tabs button")
+    .forEach(btn => btn.classList.remove("active"));
+
+  button.classList.add("active");
+
+  state.role = role;
+}
+
+async function doLogin() {
+  const email =
+    document.getElementById("loginEmail")?.value.trim();
+
+  const password =
+    document.getElementById("loginPassword")?.value;
+
+  if (!email || !password) {
+    toast("أدخل البريد الإلكتروني وكلمة المرور");
+    return;
+  }
+
+  if (!supabaseClient) {
+    toast("الاتصال بقاعدة البيانات غير جاهز");
+    return;
+  }
+
+  const button =
+    document.querySelector(".login-box .btn");
+
+  if (button) {
+    button.disabled = true;
+    button.textContent = "جاري الدخول...";
+  }
+
+  const { data, error } =
+    await supabaseClient.auth.signInWithPassword({
+      email,
+      password
+    });
+
+  if (error) {
+    console.error(error);
+
+    toast("بيانات الدخول غير صحيحة");
+
+    if (button) {
+      button.disabled = false;
+      button.textContent = "تسجيل الدخول";
+    }
+
+    return;
+  }
+
+  if (!data?.user) {
+    toast("تعذر تسجيل الدخول");
+
+    if (button) {
+      button.disabled = false;
+      button.textContent = "تسجيل الدخول";
+    }
+
+    return;
+  }
+
+  await loadProfile(data.user.id);
+}
+
+async function loadProfile(userId) {
+  const { data, error } =
+    await supabaseClient
+      .from("profiles")
+      .select("*")
+      .eq("id", userId)
+      .single();
+
+  if (error || !data) {
+    console.error(error);
+
+    await supabaseClient.auth.signOut();
+
+    toast("لم يتم العثور على بيانات الحساب");
+    login();
+
+    return;
+  }
+
+  state.profile = data;
+  state.role = data.role;
+
+  if (data.role === "supervisor") {
+    showSupervisorHome();
+    return;
+  }
+
+  if (data.role === "teacher") {
+    showTeacherHome();
+    return;
+  }
+
+  if (data.role === "student") {
+    showStudentHome();
+    return;
+  }
+
+  await supabaseClient.auth.signOut();
+
+  toast("نوع الحساب غير معروف");
+  login();
+}
+
+function baseShell(content) {
+  return `
+    <div class="shell">
+
+      <header class="top">
+
+        <div class="brand">
+          <div class="mark">ن</div>
+
+          <span>نور</span>
+
+          <span class="muted">
+            حلقات التحفيظ
+          </span>
+        </div>
+
+        <div class="top-actions">
+
+          <button
+            class="btn light"
+            onclick="logout()">
+            تسجيل الخروج
+          </button>
+
+        </div>
+
+      </header>
+
+      <main>
+        ${content}
+      </main>
+
+    </div>
+  `;
+}
+
+function showSupervisorHome() {
+  const name =
+    state.profile?.full_name || "المشرف";
+
+  document.getElementById("app").innerHTML =
+    baseShell(`
+      <section class="hero">
+
+        <div>
+
+          <h1>
+            مرحبًا بك يا ${escapeHtml(name)}
+          </h1>
+
+          <p>
+            لوحة المشرف في نظام نور
+          </p>
+
+        </div>
+
+      </section>
+
+      <div class="grid">
+
+        <div class="stat">
+          <small>نوع الحساب</small>
+          <strong>مشرف</strong>
+        </div>
+
+        <div class="stat">
+          <small>حالة الحساب</small>
+          <strong>
+            ${state.profile.is_active ? "نشط" : "غير نشط"}
+          </strong>
+        </div>
+
+      </div>
+
+      <div class="card">
+
+        <h2>
+          تم تسجيل الدخول بنجاح 🎉
+        </h2>
+
+        <p class="muted">
+          الاتصال بقاعدة بيانات نور يعمل.
+        </p>
+
+      </div>
+    `);
+}
+
+function showTeacherHome() {
+  const name =
+    state.profile?.full_name || "المعلم";
+
+  document.getElementById("app").innerHTML =
+    baseShell(`
+      <section class="hero">
+
+        <div>
+
+          <h1>
+            مرحبًا بك يا ${escapeHtml(name)}
+          </h1>
+
+          <p>
+            لوحة المعلم
+          </p>
+
+        </div>
+
+      </section>
+
+      <div class="card">
+
+        <h2>
+          لوحة المعلم
+        </h2>
+
+        <p class="muted">
+          سيتم تجهيز صلاحيات المعلم في الخطوات القادمة.
+        </p>
+
+      </div>
+    `);
+}
+
+function showStudentHome() {
+  const name =
+    state.profile?.full_name || "الطالب";
+
+  document.getElementById("app").innerHTML =
+    baseShell(`
+      <section class="hero">
+
+        <div>
+
+          <h1>
+            مرحبًا بك يا ${escapeHtml(name)}
+          </h1>
+
+          <p>
+            لوحة الطالب
+          </p>
+
+        </div>
+
+      </section>
+
+      <div class="card">
+
+        <h2>
+          لوحة الطالب
+        </h2>
+
+        <p class="muted">
+          سيتم تجهيز لوحة الطالب في الخطوات القادمة.
+        </p>
+
+      </div>
+    `);
+}
+
+async function logout() {
+  if (supabaseClient) {
+    await supabaseClient.auth.signOut();
+  }
+
+  state.role = null;
+  state.profile = null;
+
+  login();
+  toast("تم تسجيل الخروج");
+}
+
+function escapeHtml(value) {
+  return String(value)
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;")
+    .replaceAll("'", "&#039;");
+}
+
+async function startApp() {
+  if (!initSupabase()) {
+    return;
+  }
+
+  const {
+    data: { session }
+  } = await supabaseClient.auth.getSession();
+
+  if (session?.user) {
+    await loadProfile(session.user.id);
+  } else {
+    login();
+  }
+}
+
+startApp();
