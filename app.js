@@ -1,0 +1,31 @@
+const SUPABASE_URL="https://mdkhklotknuseilyrvqe.supabase.co";
+const SUPABASE_KEY="sb_publishable_bcUxs6kzHTz4nSli1l3w1A_E1tr8HOE";
+let db=null;
+const state={role:null,profile:null,page:"dashboard"};
+const navItems=[["dashboard","الرئيسية"],["halaqat","الحلقات"],["teachers","المعلمون"],["students","الطلاب"],["points","النقاط"],["attendance","التحضير والغياب"],["competitions","المسابقات"],["badges","الأوسمة"],["reports","التقارير"],["settings","الإعدادات"]];
+const titles={halaqat:"الحلقات",teachers:"المعلمون",students:"الطلاب",points:"النقاط",attendance:"التحضير والغياب",competitions:"المسابقات",badges:"الأوسمة",reports:"التقارير",settings:"الإعدادات"};
+
+function toast(m){document.querySelector(".toast")?.remove();const e=document.createElement("div");e.className="toast";e.textContent=m;document.body.appendChild(e);setTimeout(()=>e.remove(),2500)}
+function esc(v){return String(v??"").replaceAll("&","&amp;").replaceAll("<","&lt;").replaceAll(">","&gt;").replaceAll('"',"&quot;").replaceAll("'","&#039;")}
+function init(){if(!window.supabase?.createClient){toast("تعذر تحميل Supabase");return false}db=window.supabase.createClient(SUPABASE_URL,SUPABASE_KEY);return true}
+
+function login(){document.getElementById("app").innerHTML=`<div class="login"><div class="login-box"><div class="login-logo"><img class="login-logo-img" src="logo.png" alt="نور حلقات التحفيظ"><h1>نور</h1><p class="muted">نظام إدارة حلقات تحفيظ القرآن الكريم</p></div><div class="role-tabs"><button class="active" onclick="role(this,'supervisor')">مشرف</button><button onclick="role(this,'teacher')">معلم</button><button onclick="role(this,'student')">طالب</button></div><div class="field"><label>البريد الإلكتروني</label><input id="email" type="email" placeholder="أدخل البريد الإلكتروني"></div><div class="field"><label>كلمة المرور</label><input id="password" type="password" placeholder="كلمة المرور"></div><button class="btn" style="width:100%" onclick="doLogin()">تسجيل الدخول</button></div></div>`}
+function role(b,r){document.querySelectorAll(".role-tabs button").forEach(x=>x.classList.remove("active"));b.classList.add("active");state.role=r}
+
+async function doLogin(){const email=document.getElementById("email").value.trim(),password=document.getElementById("password").value;if(!email||!password)return toast("أدخل البريد وكلمة المرور");const b=document.querySelector(".login-box .btn");b.disabled=true;b.textContent="جاري الدخول...";const {data,error}=await db.auth.signInWithPassword({email,password});if(error||!data?.user){console.error(error);toast("بيانات الدخول غير صحيحة");b.disabled=false;b.textContent="تسجيل الدخول";return}await loadProfile(data.user.id)}
+
+async function loadProfile(id){const {data,error}=await db.from("profiles").select("*").eq("id",id).single();if(error||!data){await db.auth.signOut();toast("لم يتم العثور على بيانات الحساب");login();return}state.profile=data;state.role=data.role;state.page="dashboard";if(data.role==="supervisor")return renderDashboard();renderOther(data.role)}
+
+function shell(content){return `<div class="shell"><header class="top"><div class="brand"><img class="brand-logo-img" src="logo.png" alt="نور"><span>نور</span><span class="muted">حلقات التحفيظ</span></div><div class="top-actions"><button class="btn light" onclick="logout()">تسجيل الخروج</button></div></header><div class="layout"><aside><div class="nav">${navItems.map(x=>`<button class="${state.page===x[0]?"active":""}" onclick="go('${x[0]}')">${x[1]}</button>`).join("")}</div></aside><main>${content}</main></div></div>`}
+
+async function count(table,filter){let q=db.from(table).select("id",{count:"exact",head:true});if(filter)q=q.eq(filter[0],filter[1]);const {count,error}=await q;if(error){console.warn(error);return 0}return count||0}
+
+async function renderDashboard(){document.getElementById("app").innerHTML=shell(`<div class="card"><h2>جاري تحميل لوحة المشرف...</h2><p class="muted">لحظات...</p></div>`);const [students,halaqat,teachers,competitions]=await Promise.all([count("students"),count("halaqat"),count("profiles",["role","teacher"]),count("competitions")]);const name=state.profile?.full_name||"المشرف";document.getElementById("app").innerHTML=shell(`<section class="hero"><div><h1>مرحبًا بك يا ${esc(name)}</h1><p>لوحة التحكم الرئيسية لنظام نور</p></div><button class="btn gold" onclick="go('students')">إدارة الطلاب</button></section><div class="grid"><div class="stat"><small>إجمالي الطلاب</small><strong>${students}</strong></div><div class="stat"><small>الحلقات</small><strong>${halaqat}</strong></div><div class="stat"><small>المعلمون</small><strong>${teachers}</strong></div><div class="stat"><small>المسابقات</small><strong>${competitions}</strong></div></div><div class="section-title"><h2>الوصول السريع</h2></div><div class="cards"><div class="card"><h3>👨‍🎓 الطلاب</h3><p class="muted">إدارة الطلاب وبياناتهم وحلقاتهم.</p><button class="btn" onclick="go('students')">فتح الطلاب</button></div><div class="card"><h3>📚 الحلقات</h3><p class="muted">إدارة الحلقات وربط المعلمين بها.</p><button class="btn" onclick="go('halaqat')">فتح الحلقات</button></div><div class="card"><h3>🏆 المسابقات</h3><p class="muted">إدارة المسابقات والنتائج والترتيب.</p><button class="btn" onclick="go('competitions')">فتح المسابقات</button></div></div>`)}
+
+function go(page){state.page=page;if(page==="dashboard")return renderDashboard();document.getElementById("app").innerHTML=shell(`<div class="section-title"><h2>${titles[page]||"القسم"}</h2></div><div class="card"><h2>${titles[page]||"القسم"}</h2><p class="muted">هذا القسم سيتم ربطه بالبيانات في الخطوة القادمة.</p></div>`)}
+
+function renderOther(role){const t=role==="teacher"?"المعلم":"الطالب";document.getElementById("app").innerHTML=shell(`<section class="hero"><div><h1>مرحبًا بك يا ${esc(state.profile?.full_name||t)}</h1><p>لوحة ${t}</p></div></section><div class="card"><h2>تم تسجيل الدخول بنجاح 🎉</h2><p class="muted">سيتم تجهيز لوحة ${t} لاحقًا.</p></div>`)}
+
+async function logout(){await db.auth.signOut();state.role=null;state.profile=null;login()}
+async function start(){if(!init())return;const {data:{session}}=await db.auth.getSession();if(session?.user)await loadProfile(session.user.id);else login()}
+start();
